@@ -44,7 +44,7 @@ config.keys = {
     -- The '~' means NOT. So, this keybinding is active only when the
     -- process name is NOT nvim (or vi, or vim).
     pane = {
-      foreground_process_name = '~nvim|vim|vi',
+      foreground_process_name = '~(?i)nvim\\.exe',
     },
     -- When pressed, it activates our key table for 1 second.
     action = act.ActivateKeyTable { name = 'nvim_like_mode', timeout_milliseconds = 1000 },
