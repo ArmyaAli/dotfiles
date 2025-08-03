@@ -32,7 +32,7 @@ config.key_tables = {
 config.keys = {
   {
     key = 'w',
-    mods = 'SHIFT',
+    mods = 'ALT|SHIFT',
     action = wezterm.action_callback(function(window, pane)
         window:perform_action( act.ActivateKeyTable { name = 'nvim_like_mode', timeout_milliseconds = 1000 },
           pane
