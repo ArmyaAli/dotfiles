@@ -23,10 +23,33 @@ return {
         ensure_installed = {
           'lua_ls',
           'clangd',
+          'powershell_es',
+          'vtsls',
+          'gopls'
         },
         handlers = {
-          function(server_name)
-            require('lspconfig')[server_name].setup({})
+          vtsls = function()
+            require('lspconfig').vtsls.setup({})
+          end,
+          gopls = function()
+            require('lspconfig').gopls.setup({
+               on_attach = on_attach,
+                capabilities = capabilities,
+                cmd = {"gopls"},
+                filetypes = { "go", "gomod", "gowork", "gotmpl" },
+                settings = {
+                  gopls = {
+                    completeUnimported = true,
+                    usePlaceholders = true,
+                    analyses = {
+                      unusedparams = true,
+                    },
+                  },
+                },
+            })
+          end,
+          clangd = function()
+            require('lspconfig').clangd.setup({})
           end,
           lua_ls = function()
             require('lspconfig').lua_ls.setup {
@@ -56,11 +79,21 @@ return {
               },
             }
           end,
-        },
-      })
-    end,
-  },
-  { 'neovim/nvim-lspconfig' },
+          function ()
+            powershell_es = require('lspconfig').powershell_es.setup({
+              filetypes = {"ps1", "psm1", "psd1"},
+              bundle_path = "~/AppData/Local/nvim-data/mason/packages/powershell-editor-services",
+              settings = { powershell = { codeFormatting = { Preset = 'OTBS' } } },
+              init_options = {
+                enableProfileLoading = false,
+              },
+            })
+          end
+          },
+        })
+      end,
+    },
+    { 'neovim/nvim-lspconfig' },
   { 'hrsh7th/cmp-nvim-lsp' },
   { 'hrsh7th/nvim-cmp' },
 }

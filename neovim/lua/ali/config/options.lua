@@ -4,9 +4,7 @@
 -- SET --
 ----------
 
--- line numbers
-vim.wo.rnu = true;
-vim.wo.number = true;
+
 
 -- Tab width - set to 2
 vim.opt.tabstop = 2
@@ -24,7 +22,9 @@ vim.opt.signcolumn = 'yes'
 
 -- set my shell to powershell
 vim.o.shell = "powershell.exe"
-
+vim.o.shellcmdflag = "-NoProfile -Command"
+vim.o.shellquote = ""
+vim.o.shellxquote = ""
 
 ----------
 -- REMAP --
