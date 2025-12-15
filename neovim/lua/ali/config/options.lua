@@ -4,6 +4,9 @@
 -- SET --
 ----------
 
+-- Keep pwd in sync with netrw
+vim.g.netrw_keepdir = 0
+
 
 
 -- Tab width - set to 2
