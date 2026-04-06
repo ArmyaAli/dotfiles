@@ -1,0 +1,149 @@
+Vagrant.configure("2") do |config|
+  config.vm.box_check_update = false
+  config.vm.boot_timeout = ENV.fetch("VAGRANT_BOOT_TIMEOUT", "900").to_i
+
+  # Sync Neovim config from repo root into VMs so bootstrap can install it for users.
+  host_nvim_dir = File.expand_path("../neovim", __dir__)
+  if File.directory?(host_nvim_dir)
+    config.vm.synced_folder host_nvim_dir, "/dotfiles-neovim"
+  else
+    warn "Host Neovim config directory not found at #{host_nvim_dir}; skipping Neovim config sync."
+  end
+
+  # Default to non-interactive networking for automation.
+  # Modes:
+  # - public_static (default): bridged LAN static IP
+  # - public: bridged LAN DHCP
+  # - private_static: host-only static IP
+  # - private_dhcp: host-only DHCP
+  # - public: bridged networking (can prompt for host NIC)
+  # - public_static: bridged networking with static LAN IP
+  network_mode = ENV.fetch("VAGRANT_NETWORK_MODE", "public_static")
+
+  # SSH communicator defaults.
+  # In WSL, bind to 0.0.0.0 and use the WSL default gateway so Vagrant can reach
+  # the Windows-hosted forwarded SSH port.
+  ssh_bind_ip = ENV.fetch("VAGRANT_SSH_BIND_IP", ENV["WSL_DISTRO_NAME"] ? "0.0.0.0" : "127.0.0.1")
+  ssh_host = ENV["VAGRANT_SSH_HOST"]
+  ssh_private_key_path = ENV["VAGRANT_SSH_PRIVATE_KEY_PATH"]
+  if ssh_private_key_path.to_s.empty? && ENV["WSL_DISTRO_NAME"]
+    default_wsl_key = File.expand_path("~/.vagrant-wsl-private-key")
+    ssh_private_key_path = default_wsl_key if File.file?(default_wsl_key)
+  end
+  if ssh_host.to_s.empty? && ENV["WSL_DISTRO_NAME"]
+    ssh_host = `ip route 2>/dev/null | awk '/^default/ {print $3; exit}'`.strip
+  end
+  ssh_insert_key = ENV.fetch("VAGRANT_SSH_INSERT_KEY", ENV["WSL_DISTRO_NAME"] ? "false" : "true").downcase == "true"
+
+  machine_memory = ENV.fetch("VAGRANT_MEMORY", "8192")
+  machine_cpus = ENV.fetch("VAGRANT_CPUS", "4").to_i
+  machine_gui = ENV.fetch("VAGRANT_GUI", "false").downcase == "true"
+  enable_disksize = ENV.fetch("VAGRANT_ENABLE_DISKSIZE", "false").downcase == "true"
+
+  configure_machine = lambda do |vm, machine_name:, box:, hostname:, private_ip:, public_ip_default:, ssh_port:|
+    machine_id_path = File.expand_path(".vagrant/machines/#{machine_name}/virtualbox/id", __dir__)
+    default_ssh_user = File.file?(machine_id_path) ? "dev" : "vagrant"
+    public_bridge = ENV.fetch("VAGRANT_BRIDGE_INTERFACE_#{machine_name.upcase}", ENV.fetch("VAGRANT_BRIDGE_INTERFACE", ""))
+    public_ip = ENV.fetch("VAGRANT_PUBLIC_IP_#{machine_name.upcase}", ENV.fetch("VAGRANT_PUBLIC_IP", public_ip_default))
+    public_netmask = ENV.fetch("VAGRANT_PUBLIC_NETMASK_#{machine_name.upcase}", ENV.fetch("VAGRANT_PUBLIC_NETMASK", "255.255.255.0"))
+
+    vm.vm.box = box
+    vm.vm.hostname = hostname
+
+    if network_mode == "public"
+      if public_bridge.empty?
+        vm.vm.network "public_network"
+      else
+        vm.vm.network "public_network", bridge: public_bridge
+      end
+    elsif network_mode == "public_static"
+      if public_ip.empty?
+        raise "VAGRANT_NETWORK_MODE=public_static requires VAGRANT_PUBLIC_IP or VAGRANT_PUBLIC_IP_#{machine_name.upcase}."
+      end
+
+      if public_bridge.empty?
+        vm.vm.network "public_network", ip: public_ip, netmask: public_netmask
+      else
+        vm.vm.network "public_network", ip: public_ip, netmask: public_netmask, bridge: public_bridge
+      end
+    elsif network_mode == "private_dhcp"
+      vm.vm.network "private_network", type: "dhcp"
+    else
+      vm.vm.network "private_network", ip: private_ip
+    end
+
+    vm.ssh.insert_key = ssh_insert_key
+    vm.ssh.username = ENV.fetch("VAGRANT_SSH_USER_#{machine_name.upcase}", ENV.fetch("VAGRANT_SSH_USER", default_ssh_user))
+    vm.ssh.private_key_path = [ssh_private_key_path] unless ssh_private_key_path.to_s.empty?
+    vm.ssh.host = ssh_host unless ssh_host.to_s.empty?
+    vm.vm.network "forwarded_port",
+      guest: 22,
+      host: ssh_port,
+      id: "ssh",
+      auto_correct: true,
+      host_ip: ssh_bind_ip
+
+    vm.vm.provision "shell", path: "bootstrap.sh"
+
+    vm.vm.provider "virtualbox" do |vb|
+      vb.name = hostname
+      vb.gui = machine_gui
+      vb.memory = machine_memory
+      vb.cpus = machine_cpus
+
+      # Optional: increase primary disk to 64 GB.
+      # Enable with: VAGRANT_ENABLE_DISKSIZE=true (requires vagrant-disksize plugin).
+      if enable_disksize
+        if Vagrant.has_plugin?("vagrant-disksize")
+          vm.disksize.size = "64GB"
+        else
+          warn "VAGRANT_ENABLE_DISKSIZE=true but plugin 'vagrant-disksize' is not installed."
+        end
+      end
+    end
+  end
+
+  # Primary Ubuntu devbox.
+  config.vm.define "devbox", primary: true do |devbox|
+    configure_machine.call(
+      devbox,
+      machine_name: "devbox",
+      box: ENV.fetch("VAGRANT_DEVBOX_BOX", "bento/ubuntu-24.04"),
+      hostname: "ubuntu-devbox",
+      private_ip: ENV.fetch("VAGRANT_PRIVATE_IP", "192.168.56.10"),
+      public_ip_default: "192.168.2.150",
+      ssh_port: ENV.fetch("VAGRANT_SSH_PORT", "2222").to_i
+    )
+  end
+
+  # Kali Linux box.
+  config.vm.define "kali" do |kali|
+    configure_machine.call(
+      kali,
+      machine_name: "kali",
+      box: ENV.fetch("VAGRANT_KALI_BOX", "kalilinux/rolling"),
+      hostname: "kali-devbox",
+      private_ip: ENV.fetch("VAGRANT_PRIVATE_IP_KALI", "192.168.56.11"),
+      public_ip_default: "192.168.2.151",
+      ssh_port: ENV.fetch("VAGRANT_SSH_PORT_KALI", "2223").to_i
+    )
+  end
+
+  # Tails box requires a user-provided Vagrant box name.
+  tails_box = ENV.fetch("VAGRANT_TAILS_BOX", "")
+  if tails_box.empty?
+    warn "Tails box is disabled. Set VAGRANT_TAILS_BOX=<box-name> to enable the 'tails' machine."
+  else
+    config.vm.define "tails" do |tails|
+      configure_machine.call(
+        tails,
+        machine_name: "tails",
+        box: tails_box,
+        hostname: "tails-devbox",
+        private_ip: ENV.fetch("VAGRANT_PRIVATE_IP_TAILS", "192.168.56.12"),
+        public_ip_default: "192.168.2.152",
+        ssh_port: ENV.fetch("VAGRANT_SSH_PORT_TAILS", "2224").to_i
+      )
+    end
+  end
+end

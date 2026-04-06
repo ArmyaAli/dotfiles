@@ -13,7 +13,7 @@ vim.g.netrw_keepdir = 0
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.expandtab = true
-vim.bo.softtabstop = 2
+vim.opt.softtabstop = 2
 
 -- incremental search
 vim.opt.incsearch = true;
@@ -23,11 +23,13 @@ vim.opt.incsearch = true;
 -- This will avoid an annoying layout shift in the screen
 vim.opt.signcolumn = 'yes'
 
--- set my shell to powershell
-vim.o.shell = "powershell.exe"
-vim.o.shellcmdflag = "-NoProfile -Command"
-vim.o.shellquote = ""
-vim.o.shellxquote = ""
+-- Only force PowerShell when running on Windows.
+if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
+  vim.o.shell = "powershell.exe"
+  vim.o.shellcmdflag = "-NoProfile -Command"
+  vim.o.shellquote = ""
+  vim.o.shellxquote = ""
+end
 
 ----------
 -- REMAP --
