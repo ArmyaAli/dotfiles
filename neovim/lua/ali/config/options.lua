@@ -1,4 +1,5 @@
--- NOTE(Ali): default leader key: <spacebar>
+vim.g.mapleader = " "
+vim.g.maplocalleader = "\\"
 
 ----------
 -- SET --
@@ -7,8 +8,6 @@
 -- Keep pwd in sync with netrw
 vim.g.netrw_keepdir = 0
 
-
-
 -- Tab width - set to 2
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
@@ -16,12 +15,35 @@ vim.opt.expandtab = true
 vim.opt.softtabstop = 2
 
 -- incremental search
-vim.opt.incsearch = true;
+vim.opt.incsearch = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.hlsearch = true
 
 -- From lspconfig
 -- Reserve a space in the gutter
 -- This will avoid an annoying layout shift in the screen
 vim.opt.signcolumn = 'yes'
+
+-- Sensible modern UI defaults.
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.cursorline = true
+vim.opt.termguicolors = true
+vim.opt.mouse = 'a'
+vim.opt.wrap = false
+vim.opt.scrolloff = 8
+vim.opt.sidescrolloff = 8
+vim.opt.splitbelow = true
+vim.opt.splitright = true
+vim.opt.undofile = true
+vim.opt.undodir = vim.fn.stdpath('state') .. '/undo'
+vim.opt.updatetime = 250
+vim.opt.timeoutlen = 300
+vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
+if vim.fn.has('nvim-0.12') == 1 then
+  vim.opt.completeopt:append('popup')
+end
 
 -- Only force PowerShell when running on Windows.
 if vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1 then
@@ -62,32 +84,23 @@ vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Telescope help ta
 vim.api.nvim_create_autocmd('LspAttach', {
   desc = 'LSP actions',
   callback = function(event)
+    local client = assert(vim.lsp.get_client_by_id(event.data.client_id))
     local opts = { buffer = event.buf }
-    vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<cr>', opts)
-    vim.keymap.set('n', 'gd', '<cmd>lua vim.lsp.buf.definition()<cr>', opts)
-    vim.keymap.set('n', 'gD', '<cmd>lua vim.lsp.buf.declaration()<cr>', opts)
-    vim.keymap.set('n', 'gi', '<cmd>lua vim.lsp.buf.implementation()<cr>', opts)
-    vim.keymap.set('n', 'go', '<cmd>lua vim.lsp.buf.type_definition()<cr>', opts)
-    vim.keymap.set('n', 'gr', '<cmd>lua vim.lsp.buf.references()<cr>', opts)
-    vim.keymap.set('n', 'gs', '<cmd>lua vim.lsp.buf.signature_help()<cr>', opts)
-    vim.keymap.set('n', '<F2>', '<cmd>lua vim.lsp.buf.rename()<cr>', opts)
+    vim.keymap.set('n', 'K', vim.lsp.buf.hover, vim.tbl_extend('force', opts, { desc = 'LSP hover' }))
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, vim.tbl_extend('force', opts, { desc = 'LSP definition' }))
+    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, vim.tbl_extend('force', opts, { desc = 'LSP declaration' }))
+    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, vim.tbl_extend('force', opts, { desc = 'LSP implementation' }))
+    vim.keymap.set('n', 'go', vim.lsp.buf.type_definition, vim.tbl_extend('force', opts, { desc = 'LSP type definition' }))
+    vim.keymap.set('n', 'gr', vim.lsp.buf.references, vim.tbl_extend('force', opts, { desc = 'LSP references' }))
+    vim.keymap.set('n', 'gs', vim.lsp.buf.signature_help, vim.tbl_extend('force', opts, { desc = 'LSP signature help' }))
+    vim.keymap.set('n', '<F2>', vim.lsp.buf.rename, vim.tbl_extend('force', opts, { desc = 'LSP rename' }))
     -- Autoformat
-    vim.keymap.set({ 'n', 'x' }, '<F3>', '<cmd>lua vim.lsp.buf.format({async = true})<cr>', opts)
-    vim.keymap.set('n', '<F4>', '<cmd>lua vim.lsp.buf.code_action()<cr>', opts)
-  end,
-})
+    vim.keymap.set({ 'n', 'x' }, '<F3>', function() vim.lsp.buf.format({ async = true }) end, vim.tbl_extend('force', opts, { desc = 'Format buffer' }))
+    vim.keymap.set('n', '<F4>', vim.lsp.buf.code_action, vim.tbl_extend('force', opts, { desc = 'LSP code action' }))
 
--- Autocomplete
-local cmp = require('cmp')
-cmp.setup({
-  sources = {
-    { name = 'nvim_lsp' },
-  },
-  snippet = {
-    expand = function(args)
-      -- You need Neovim v0.10 to use vim.snippet
-      vim.snippet.expand(args.body)
-    end,
-  },
-  mapping = cmp.mapping.preset.insert({}),
+    -- Use Neovim's built-in LSP completion instead of a completion bridge.
+    if client:supports_method('textDocument/completion') then
+      vim.lsp.completion.enable(true, client.id, event.buf, { autotrigger = true })
+    end
+  end,
 })

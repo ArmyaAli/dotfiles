@@ -12,11 +12,8 @@ return {
     dependencies = {
       "williamboman/mason.nvim",
       "neovim/nvim-lspconfig",
-      "hrsh7th/cmp-nvim-lsp",
     },
     config = function()
-      local lspconfig = require('lspconfig')
-      local capabilities = require('cmp_nvim_lsp').default_capabilities()
       local is_windows = vim.fn.has("win32") == 1 or vim.fn.has("win64") == 1
       local servers = {
         vtsls = {},
@@ -56,19 +53,15 @@ return {
         }
       end
 
+      for server_name, server_config in pairs(servers) do
+        vim.lsp.config(server_name, server_config)
+      end
+
+      -- Mason installs servers first, then enables the ones that are available.
       require('mason-lspconfig').setup({
         ensure_installed = vim.tbl_keys(servers),
-        handlers = {
-          function(server_name)
-            local server_config = vim.tbl_deep_extend('force', {
-              capabilities = capabilities,
-            }, servers[server_name] or {})
-            lspconfig[server_name].setup(server_config)
-          end,
-        },
+        automatic_enable = true,
       })
     end,
   },
-  { 'hrsh7th/cmp-nvim-lsp' },
-  { 'hrsh7th/nvim-cmp' },
 }
