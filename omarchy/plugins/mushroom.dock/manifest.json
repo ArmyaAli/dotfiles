@@ -4,12 +4,14 @@
   "name": "Mushroom Grove Dock",
   "version": "1.0.0",
   "author": "mushroom",
-  "description": "Minimal floating dock with mushroom-grove theming, proximity magnification, and a Super-key peek",
+  "description": "Omarchy dock clone themed for mushroom-grove, with peek, magnification, and badges",
   "kinds": [
-    "panel"
+    "service"
   ],
-  "keepLoaded": true,
   "entryPoints": {
-    "panel": "Dock.qml"
+    "service": "Dock.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.dock"
   }
 }

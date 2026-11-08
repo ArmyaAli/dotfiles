@@ -191,7 +191,12 @@ excluded.
     audio, monitor, power.
   - Bar plugin: `mushroom.bar`.
   - Plugins: `mushroom.dock`, `mushroom.dashboard`, `mushroom.notifications`.
-  - Disabled: `omarchy.notifications`; clone source restored: `mushroom.notifications`.
+  - Dock (`mushroom.dock`, a clone of `omarchy.dock`): bottom edge, auto-hide
+    off, pinned apps chromium, wezterm, Nautilus, obsidian, signal, Discord,
+    OBS, kdenlive, mpv, Moonlight.
+  - Disabled: `omarchy.notifications` and the dock source `omarchy.dock`
+    (replaced by the clone); clone sources restorable: `mushroom.notifications`,
+    `mushroom.dock`.
 
 ### `omarchy/shell.toml`
 - Sets shell font `base-size = 11`.
@@ -211,9 +216,47 @@ User-authored Quickshell plugins:
   screen recording, stay awake).
 - `mushroom.dashboard`: dashboard window with model, icons, and shader
   (`vortex.frag`).
-- `mushroom.dock`: dock window with pinned apps (`pinned.json`).
+- `mushroom.dock`: clone of the first-party `omarchy.dock` (marked
+  `omarchy.clonedFrom`, so the built-in is disabled and built-in IPC ids route
+  here) with the mushroom-grove look and on-demand behavior layered on.
 - `mushroom.notifications`: notification service and card components.
 - `mushroom.workspaces`: workspace widget.
+
+### Dock (`mushroom.dock`)
+
+Built on the stock dock, so it keeps the stock model:
+- Shows on floating workspaces (and can be called up anywhere), respects
+  fullscreen, supports drag reorder, external drag-in from the app grid,
+  context menus (position, auto-hide, new window, keep/remove, quit), and
+  launch pulses.
+- Pins live in `shell.json` `.dock.pinned` and are written through
+  `omarchy dock pin/unpin/pinned`; there is no plugin-local `pinned.json`.
+
+Mushroom styling and behavior:
+- Translucent theme-tinted pill with rounded shadow; mushroom launcher disc;
+  circular app discs with focus bloom; instance-count badges; running
+  indicators.
+- Proximity magnification: discs grow toward the pointer and neighbours make
+  room, computed against the unmagnified slot grid.
+- One shared hover label (`Name · N windows`).
+- Tucked off the edge by default away from floating workspaces; reveals on a
+  `Super` tap, at the dock edge, via IPC, or pins open. While tucked, only the
+  hair-thin edge strip takes input, so the desktop stays click-through.
+
+Launcher disc: left click opens the Omarchy menu, right click a terminal,
+middle click the stock app grid, `Shift`+left the stock dock settings menu.
+
+IPC:
+- `omarchy-shell mushroom-dock peek|dismiss|toggle|show|hide|cycle <1|-1>|pin <id>|apps|refresh|ping`
+- `omarchy-shell omarchy.dock refresh|apps` (built-in ids route to the clone).
+
+Hyprland bindings (`~/.config/hypr/bindings.lua`):
+- `SUPER + SUPER_L` -> `omarchy-shell mushroom-dock peek`
+- `SUPER + A` -> `omarchy-shell mushroom-dock cycle 1`
+
+A cloned plugin gets a scoped shell API without `shellConfig`, so the dock
+reads and watches `~/.config/omarchy/shell.json` plus the packaged defaults
+directly; all writes still go through `omarchy-dock`.
 
 ### `omarchy/hooks/`
 Custom hooks plus locally edited samples:
@@ -233,6 +276,9 @@ Custom hooks plus locally edited samples:
 rsync -a omarchy/ ~/.config/omarchy/
 omarchy restart shell
 ```
+
+`omarchy/shell.json` already disables the built-in `omarchy.dock` and enables
+the vendored `mushroom.dock` clone, so the restored dock is the themed one.
 
 Third-party webcam plugin is not vendored; re-clone it before restarting:
 

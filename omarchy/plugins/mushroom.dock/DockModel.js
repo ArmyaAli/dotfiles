@@ -1,184 +1,190 @@
-.pragma library
+// The dock's state that does not need Quickshell: where it sits, which apps it
+// shows, and which window a click brings forward.
 
-// ---------------------------------------------------------------------------
-// Mushroom Grove Dock - pure data model
-//
-// Plain JS so the QML side stays declarative. Inputs are Hyprland toplevels,
-// desktop entries, the active window, and the user's pin list.
-// ---------------------------------------------------------------------------
+var POSITIONS = ["top", "bottom", "left", "right"]
 
-// Fallback pins, used when pinned.json is missing. Resolution is deliberately
-// fuzzy: an entry may be a desktop id, a startup class, or an app name.
-var defaultPinned = [
-  "chromium",
-  "org.wezfurlong.wezterm",
-  "org.gnome.Nautilus",
-  "obsidian",
-  "signal",
-  "Discord",
-  "com.obsproject.Studio",
-  "org.kde.kdenlive",
-  "mpv",
-  "com.moonlight_stream.Moonlight"
-]
-
-function normalize(value) {
-  return String(value || "").replace(/\.desktop$/, "").toLowerCase().trim()
+function normalizePosition(value) {
+  var position = String(value || "").trim().toLowerCase()
+  return POSITIONS.indexOf(position) >= 0 ? position : "bottom"
 }
 
-function lastSegment(value) {
-  var v = normalize(value)
-  var i = v.lastIndexOf(".")
-  return i >= 0 ? v.slice(i + 1) : v
+function isVertical(position) {
+  var normalized = normalizePosition(position)
+  return normalized === "left" || normalized === "right"
 }
 
-// All the spellings a window class or desktop id might be known by.
-function candidateKeys(value) {
-  var v = normalize(value)
-  if (!v) return []
-  var out = [v]
-  var last = lastSegment(v)
-  if (last && last !== v) out.push(last)
-  return out
+function normalizeId(value) {
+  var id = String(value || "").trim()
+  if (id.slice(-8) === ".desktop") id = id.slice(0, -8)
+  return id
 }
 
-function keysOverlap(a, b) {
-  for (var i = 0; i < a.length; i++)
-    for (var j = 0; j < b.length; j++)
-      if (a[i] === b[j]) return true
-  return false
-}
-
-function titleCase(value) {
-  var v = String(value || "").replace(/[-_.]+/g, " ").replace(/\s+/g, " ").trim()
-  if (!v) return "Application"
-  return v.charAt(0).toUpperCase() + v.slice(1)
-}
-
-function buildIndex(entries) {
-  var index = {}
-  for (var i = 0; i < entries.length; i++) {
-    var e = entries[i]
-    if (!e) continue
-    var keys = candidateKeys(e.id)
-    keys.push(normalize(e.startupClass))
-    keys.push(normalize(e.name))
-    for (var k = 0; k < keys.length; k++) {
-      if (keys[k] && index[keys[k]] === undefined) index[keys[k]] = e
-    }
+function pinnedIds(dockConfig, defaultsConfig) {
+  var source = dockConfig && Array.isArray(dockConfig.pinned) ? dockConfig.pinned
+    : (defaultsConfig && Array.isArray(defaultsConfig.pinned) ? defaultsConfig.pinned : [])
+  var ids = []
+  for (var i = 0; i < source.length; i++) {
+    var id = normalizeId(source[i])
+    if (id && ids.indexOf(id) === -1) ids.push(id)
   }
-  return index
+  return ids
 }
 
-function lookup(index, keys) {
-  for (var i = 0; i < keys.length; i++) {
-    var hit = index[keys[i]]
-    if (hit) return hit
-  }
-  return null
+// Only app windows on regular workspaces belong in the dock. Helpers without a
+// visible desktop entry, such as the agent window, and anything parked on a
+// special workspace, such as the scratchpad, stay out of it. A minimized window
+// always belongs, entry or not, since the dock is the only way back to it.
+function isDockWindow(window) {
+  if (!window || !window.key) return false
+  if (window.minimized === true) return true
+  return window.hasEntry === true && window.workspaceId >= 1
 }
 
-function displayName(entry, appId) {
-  if (entry && entry.name) return entry.name
-  return titleCase(lastSegment(appId))
+// Minimizing moves a window to this special workspace, and the dock brings it
+// back.
+var MINIMIZED_WORKSPACE = "special:minimized"
+
+function isMinimizedWorkspace(name) {
+  return String(name || "") === MINIMIZED_WORKSPACE
 }
 
-// Group Hyprland toplevels by application. Returns an array of
-// { key, appId, keys, windows } in first-seen order.
-function groupToplevels(toplevels) {
-  var groups = []
-  var byKey = {}
-  for (var i = 0; i < toplevels.length; i++) {
-    var t = toplevels[i]
-    if (!t || !t.wayland) continue
-    var appId = ""
-    if (t.wayland.appId) appId = t.wayland.appId
-    else if (t.lastIpcObject && t.lastIpcObject.class) appId = t.lastIpcObject.class
-    else if (t.title) appId = t.title
-    appId = normalize(appId)
-    if (!appId) continue
-    var keys = candidateKeys(appId)
-    var key = keys[0]
-    var group = byKey[key]
-    if (!group) {
-      group = { key: key, appId: appId, keys: keys, windows: [] }
-      byKey[key] = group
-      groups.push(group)
-    }
-    group.windows.push(t)
-  }
-  return groups
-}
-
-function findGroup(groups, used, keys) {
-  for (var i = 0; i < groups.length; i++) {
-    if (used[i]) continue
-    if (keysOverlap(groups[i].keys, keys)) return i
-  }
-  return -1
-}
-
-function makeApp(entry, appId, keys, windows) {
-  return {
-    pinned: true,
-    entry: entry,
-    desktopId: entry ? entry.id : "",
-    appId: appId,
-    keys: keys,
-    name: displayName(entry, appId),
-    icon: entry ? entry.icon : appId,
-    windows: windows
-  }
-}
-
-// The dock model: the pinned apps in configured order. Each app carries the
-// windows that belong to it so the indicator can show running/focused state.
-function buildApps(pinnedIds, entries, toplevels, activeAppId) {
-  var index = buildIndex(entries || [])
-  var groups = groupToplevels(toplevels || [])
-  var used = {}
-  var apps = []
-
-  var pins = Array.isArray(pinnedIds) ? pinnedIds : defaultPinned
-  for (var p = 0; p < pins.length; p++) {
-    var id = normalize(pins[p])
-    if (!id) continue
-    var keys = candidateKeys(id)
-    var entry = lookup(index, keys)
-    var gi = findGroup(groups, used, keys)
-    var windows = []
-    if (gi >= 0) {
-      used[gi] = true
-      windows = groups[gi].windows
-    }
-    apps.push(makeApp(entry, entry ? entry.id : id, keys, windows))
-  }
-
-  return apps
-}
-
-function isFocused(app, activeAppId) {
-  var a = normalize(activeAppId)
-  if (!a || !app) return false
-  var keys = app.keys && app.keys.length ? app.keys : candidateKeys(app.appId)
-  return keysOverlap(keys, candidateKeys(a))
-}
-
-// ------------------------------------------------------------------ pin index
-
-function pinnedKeySet(pinnedIds) {
-  var set = {}
-  var list = Array.isArray(pinnedIds) ? pinnedIds : defaultPinned
+// A terminal app's window carries the app id its launcher gave the terminal,
+// which no desktop entry names as its class. The entry that passes that app id
+// claims it, and so does a terminal entry for the command Omarchy's TUI
+// launcher named it after (org.omarchy.nvim for nvim). Entries are
+// { id, execString, command, runInTerminal }.
+function claimingEntryId(appId, entries) {
+  var id = String(appId || "")
+  if (!id) return ""
+  var list = entries || []
+  var flag = "--app-id=" + id
   for (var i = 0; i < list.length; i++) {
-    var keys = candidateKeys(list[i])
-    for (var k = 0; k < keys.length; k++) set[keys[k]] = true
+    var words = String(list[i].execString || "").split(/\s+/)
+    if (words.indexOf(flag) >= 0) return list[i].id
   }
-  return set
+  if (id.indexOf("org.omarchy.") !== 0) return ""
+  var command = id.slice("org.omarchy.".length)
+  for (var j = 0; j < list.length; j++) {
+    var program = String((list[j].command || [])[0] || "")
+    if (list[j].runInTerminal && program.slice(program.lastIndexOf("/") + 1) === command) return list[j].id
+  }
+  return ""
 }
 
-function isPinned(pinnedIds, id) {
-  var set = pinnedKeySet(pinnedIds)
-  var keys = candidateKeys(id)
-  for (var i = 0; i < keys.length; i++) if (set[keys[i]]) return true
-  return false
+// Pinned apps come first, in pin order, whether or not they run. Running apps
+// that are not pinned follow in the order their first window appeared. Each
+// window is { key, hasEntry, workspaceId, ... } where key is the desktop id of
+// the entry that claims it.
+function buildItems(pinned, windows) {
+  var items = []
+  var byKey = {}
+
+  function itemFor(key, isPinned) {
+    if (!byKey[key]) {
+      byKey[key] = { key: key, pinned: isPinned, windows: [] }
+      items.push(byKey[key])
+    }
+    return byKey[key]
+  }
+
+  for (var i = 0; i < (pinned || []).length; i++) {
+    if (pinned[i]) itemFor(pinned[i], true)
+  }
+
+  for (var j = 0; j < (windows || []).length; j++) {
+    var window = windows[j]
+    if (isDockWindow(window)) itemFor(window.key, false).windows.push(window)
+  }
+
+  return items
+}
+
+// Puts the items in the dock's own order, which the dock keeps for the
+// session: an app keeps its slot while it stays in the dock, and an app that
+// joins goes at the end. Items the order does not know yet follow in the order
+// buildItems gave them.
+function orderItems(items, order) {
+  var byKey = {}
+  for (var i = 0; i < (items || []).length; i++) byKey[items[i].key] = items[i]
+  var result = []
+  var placed = {}
+  for (var j = 0; j < (order || []).length; j++) {
+    var key = order[j]
+    if (byKey[key] && !placed[key]) {
+      result.push(byKey[key])
+      placed[key] = true
+    }
+  }
+  for (var k = 0; k < (items || []).length; k++) {
+    if (!placed[items[k].key]) result.push(items[k])
+  }
+  return result
+}
+
+// The order with key moved to index, counted once key has left its old slot.
+function orderWithKeyAt(order, key, index) {
+  var keys = (order || []).filter(function(other) { return other !== key })
+  keys.splice(Math.max(0, Math.min(keys.length, index)), 0, key)
+  return keys
+}
+
+// Where a dragged icon lands: its own slot moved by however many slots the
+// pointer has travelled, kept within the dock.
+function dropIndex(fromIndex, offset, slotSize, count) {
+  if (count <= 0 || !(slotSize > 0)) return fromIndex
+  var target = fromIndex + Math.round(offset / slotSize)
+  return Math.max(0, Math.min(count - 1, target))
+}
+
+// The pins to save for the dock's order: the pinned apps in that order, then
+// pins the dock is not showing, because their app is not installed, as they
+// were. pinned holds the pinned desktop ids as keys.
+function pinsInOrder(order, pinned, allPinned) {
+  var result = (order || []).filter(function(key) { return pinned[key] === true })
+  for (var i = 0; i < (allPinned || []).length; i++) {
+    if (result.indexOf(allPinned[i]) === -1 && (order || []).indexOf(allPinned[i]) === -1) result.push(allPinned[i])
+  }
+  return result
+}
+
+// The window a click on an app brings forward. Windows on the workspace in
+// front of the user come first, then minimized ones, which come back to it,
+// and only then those on other workspaces. Clicking again while one of them
+// is focused moves on to the next in that order. Windows are
+// { workspaceId, minimized, activated }.
+function pickWindow(windows, workspaceId) {
+  var list = windows || []
+  if (list.length === 0) return -1
+
+  function rank(window) {
+    if (window.minimized) return 1
+    return window.workspaceId === workspaceId ? 0 : 2
+  }
+
+  var order = list.map(function(window, index) { return index })
+  order.sort(function(a, b) { return rank(list[a]) - rank(list[b]) || a - b })
+
+  for (var i = 0; i < order.length; i++) {
+    if (list[order[i]].activated) return order[(i + 1) % order.length]
+  }
+  return order[0]
+}
+
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    normalizePosition: normalizePosition,
+    isVertical: isVertical,
+    normalizeId: normalizeId,
+    pinnedIds: pinnedIds,
+    isDockWindow: isDockWindow,
+    isMinimizedWorkspace: isMinimizedWorkspace,
+    claimingEntryId: claimingEntryId,
+    buildItems: buildItems,
+    orderItems: orderItems,
+    orderWithKeyAt: orderWithKeyAt,
+    dropIndex: dropIndex,
+    pinsInOrder: pinsInOrder,
+    pickWindow: pickWindow
+  }
 }

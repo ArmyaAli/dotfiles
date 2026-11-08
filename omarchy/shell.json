@@ -1,30 +1,16 @@
 {
-  "version": 1,
-  "idle": {
-    "screensaver": 150,
-    "lock": 300
-  },
   "bar": {
-    "position": "top",
-    "transparent": true,
     "centerAnchor": "omarchy.clock",
+    "id": "mushroom.bar",
     "layout": {
-      "left": [
-        {
-          "id": "omarchy.menu"
-        },
-        {
-          "id": "mushroom.workspaces"
-        }
-      ],
       "center": [
         {
           "id": "omarchy.indicators"
         },
         {
-          "id": "omarchy.clock",
           "format": "dddd HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
+          "id": "omarchy.clock",
           "verticalFormat": "HH\n—\nmm"
         },
         {
@@ -59,6 +45,16 @@
           "id": "omarchy.system-update"
         }
       ],
+      "centerBegin": [],
+      "centerEnd": [],
+      "left": [
+        {
+          "id": "omarchy.menu"
+        },
+        {
+          "id": "mushroom.workspaces"
+        }
+      ],
       "right": [
         {
           "id": "omarchy.keyboard-layout"
@@ -67,8 +63,8 @@
           "id": "omarchy.tray"
         },
         {
-          "id": "io.github.kristoferlund.webcam",
-          "device": ""
+          "device": "",
+          "id": "io.github.kristoferlund.webcam"
         },
         {
           "id": "omarchy.tailscale"
@@ -92,11 +88,38 @@
           "id": "omarchy.power"
         }
       ],
-      "centerBegin": [],
-      "centerEnd": [],
       "tray": []
     },
-    "id": "mushroom.bar"
+    "position": "top",
+    "transparent": true
+  },
+  "cloneSourceRestores": [
+    "mushroom.notifications",
+    "mushroom.dock"
+  ],
+  "disabledPlugins": [
+    "omarchy.notifications",
+    "omarchy.dock"
+  ],
+  "dock": {
+    "autohide": false,
+    "pinned": [
+      "chromium",
+      "org.wezfurlong.wezterm",
+      "org.gnome.Nautilus",
+      "obsidian",
+      "signal",
+      "Discord",
+      "com.obsproject.Studio",
+      "org.kde.kdenlive",
+      "mpv",
+      "com.moonlight_stream.Moonlight"
+    ],
+    "position": "bottom"
+  },
+  "idle": {
+    "lock": 300,
+    "screensaver": 150
   },
   "plugins": [
     {
@@ -109,10 +132,5 @@
       "id": "mushroom.notifications"
     }
   ],
-  "disabledPlugins": [
-    "omarchy.notifications"
-  ],
-  "cloneSourceRestores": [
-    "mushroom.notifications"
-  ]
+  "version": 1
 }
