@@ -254,9 +254,11 @@ Hyprland bindings (`~/.config/hypr/bindings.lua`):
 - `SUPER + SUPER_L` -> `omarchy-shell mushroom-dock peek`
 - `SUPER + A` -> `omarchy-shell mushroom-dock cycle 1`
 
-A cloned plugin gets a scoped shell API without `shellConfig`, so the dock
-reads and watches `~/.config/omarchy/shell.json` plus the packaged defaults
-directly; all writes still go through `omarchy-dock`.
+A cloned plugin gets a scoped shell API without `shellConfig` or `appLibrary`,
+so the dock reads and watches `~/.config/omarchy/shell.json` plus the packaged
+defaults directly, and carries its own app-list, launch, icon, and uninstall
+fallbacks (`uwsm-app -- gtk-launch`, `omarchy-launch-tui` for terminal entries).
+All config writes still go through `omarchy-dock`.
 
 ### `omarchy/hooks/`
 Custom hooks plus locally edited samples:
@@ -267,7 +269,8 @@ Custom hooks plus locally edited samples:
 
 ### `omarchy/branding/`, `omarchy/defaults/`, `omarchy/extensions/`
 - `branding/about.txt`, `branding/screensaver.txt`: custom about/screensaver text.
-- `defaults/agent` (`codex`), `defaults/dictation` (`voxtype`): chosen defaults.
+- `defaults/agent` (`omp`), `defaults/dictation` (`voxtype`): chosen defaults.
+  `omp` is what `SUPER + grave` (quake console) and `omarchy agent` launch.
 - `extensions/omarchy-menu.jsonc`: launcher/menu extension file.
 
 ### Restore

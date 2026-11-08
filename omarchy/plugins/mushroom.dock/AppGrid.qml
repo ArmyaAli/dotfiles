@@ -51,9 +51,22 @@ Item {
   readonly property int gridWidth: columns * cellWidth
   readonly property int cardHeight: Math.min(panel.height - screenMargin * 2, inset * 2 + headerHeight + headerSpacing + visibleRows * cellHeight)
 
+  function entryName(entry) {
+    if (root.appLibrary) return root.appLibrary.entryName(entry)
+    if (root.dock) return root.dock.entryName(entry)
+    return String((entry && entry.name) || (entry && entry.id) || "")
+  }
+
+  function iconSource(icon) {
+    if (root.appLibrary) return root.appLibrary.iconSource(icon)
+    if (root.dock) return root.dock.iconSource(icon)
+    return Quickshell.iconPath(String(icon || ""), true)
+  }
+
   function open() {
     root.selectedIndex = 0
     if (root.appLibrary) root.appLibrary.refreshIcons()
+    else if (root.dock) root.dock.refreshIcons()
     // The cells from last time are reused when nothing changed, so the grid
     // opens with its icons already drawn.
     if (root.appsStale || root.filterText !== "" || root.apps.length === 0) {
@@ -108,6 +121,7 @@ Item {
     root.uninstallEntry = null
     root.close()
     if (entry && root.appLibrary) root.appLibrary.remove(entry.id, root.appLibrary.entryName(entry))
+    else if (entry && root.dock) root.dock.removeEntry(entry)
   }
 
   function openMenu(entry, point) {
@@ -122,7 +136,8 @@ Item {
 
   function rebuild() {
     root.appsStale = false
-    var rows = root.appLibrary ? root.appLibrary.sortedEntries(root.filterText) : []
+    var rows = root.appLibrary ? root.appLibrary.sortedEntries(root.filterText)
+      : (root.dock ? root.dock.sortedEntries(root.filterText) : [])
     root.apps = rows.map(function(row) { return row.entry })
     root.selectedIndex = Math.max(0, Math.min(root.selectedIndex, root.apps.length - 1))
     grid.positionViewAtBeginning()
@@ -142,10 +157,10 @@ Item {
 
   function launch(index) {
     var entry = root.apps[index]
-    if (!entry || !root.appLibrary) return
+    if (!entry) return
     root.close()
     if (root.dock) root.dock.launchEntry(entry)
-    else root.appLibrary.launch(entry.id, root.appLibrary.entryName(entry))
+    else if (root.appLibrary) root.appLibrary.launch(entry.id, root.appLibrary.entryName(entry))
   }
 
   FontMetrics {
@@ -218,7 +233,7 @@ Item {
         anchors.fill: parent
         opened: !!root.uninstallEntry
         z: 10
-        message: Commons.I18n.t("common.uninstallConfirm").arg(root.uninstallEntry && root.appLibrary ? root.appLibrary.entryName(root.uninstallEntry) : "")
+        message: Commons.I18n.t("common.uninstallConfirm").arg(root.uninstallEntry ? root.entryName(root.uninstallEntry) : "")
         confirmText: Commons.I18n.t("common.uninstall")
         background: Commons.Color.menu.background
         foreground: Commons.Color.menu.text
@@ -334,7 +349,7 @@ Item {
                 width: root.iconSize
                 height: root.iconSize
                 sourceSize: Qt.size(root.iconSize * 2, root.iconSize * 2)
-                source: root.appLibrary ? root.appLibrary.iconSource(cell.modelData.icon) : ""
+                source: root.iconSource(cell.modelData.icon)
                 fillMode: Image.PreserveAspectFit
                 // Loaded with the cell, from Qt's image cache after the first
                 // open, so icons do not pop in after the grid has appeared.
@@ -359,7 +374,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: parent.width - (root.cellGutter + Style.spacing.md) * 2
                 textFormat: Text.PlainText
-                text: root.appLibrary ? root.appLibrary.entryName(cell.modelData) : ""
+                text: root.entryName(cell.modelData)
                 color: cell.selected ? Commons.Color.menu.selectedText : Commons.Color.menu.text
                 font.family: Style.font.menuFamily
                 font.pixelSize: Style.font.body
@@ -425,7 +440,7 @@ Item {
       width: root.iconSize
       height: root.iconSize
       sourceSize: Qt.size(root.iconSize * 2, root.iconSize * 2)
-      source: root.dragEntry && root.appLibrary ? root.appLibrary.iconSource(root.dragEntry.icon) : ""
+      source: root.dragEntry ? root.iconSource(root.dragEntry.icon) : ""
       fillMode: Image.PreserveAspectFit
       smooth: true
       mipmap: true

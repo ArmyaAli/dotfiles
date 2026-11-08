@@ -206,7 +206,7 @@ Item {
   function iconFor(item) {
     var entry = entryFor(item)
     var icon = entry && entry.icon ? entry.icon : (item ? item.key : "")
-    return root.appLibrary ? root.appLibrary.iconSource(icon) : Quickshell.iconPath(icon, true)
+    return root.iconSource(icon)
   }
 
   function launch(item) {
@@ -218,8 +218,92 @@ Item {
     root.launchEntry(entry)
   }
 
+  // A cloned plugin's scoped shell API has no appLibrary (only menu-kind
+  // plugins get one), so the dock carries its own app-list, launch, and
+  // uninstall paths. They mirror AppLibrary's behavior.
+  function entryName(entry) {
+    if (root.appLibrary) return root.appLibrary.entryName(entry)
+    return String((entry && entry.name) || (entry && entry.id) || "")
+  }
+
+  function entrySubtext(entry) {
+    if (root.appLibrary) return root.appLibrary.entrySubtext(entry)
+    return String((entry && entry.genericName) || "")
+  }
+
+  function iconSource(icon) {
+    if (root.appLibrary) return root.appLibrary.iconSource(icon)
+    var value = String(icon || "")
+    if (value.indexOf("file://") === 0 || value.indexOf("image://") === 0) return value
+    if (value.charAt(0) === "/") return Util.fileUrl(value)
+    if (value.length > 0) {
+      var themed = Quickshell.iconPath(value, true)
+      if (themed && themed.length > 0) return themed
+    }
+    return Quickshell.iconPath("application-x-executable", true)
+  }
+
+  function refreshIcons() {
+    if (root.appLibrary) root.appLibrary.refreshIcons()
+  }
+
+  function sortedEntries(query) {
+    if (root.appLibrary) return root.appLibrary.sortedEntries(query)
+    var terms = String(query || "").toLowerCase().trim().split(/\s+/)
+    var rows = []
+    var values = DesktopEntries.applications.values
+    for (var i = 0; i < values.length; i++) {
+      var entry = values[i]
+      if (!entry || entry.noDisplay) continue
+      var name = root.entryName(entry)
+      if (!name) continue
+      var haystack = [name, entry.genericName, entry.comment, entry.id].join(" ").toLowerCase()
+      var matches = true
+      for (var j = 0; j < terms.length; j++) {
+        if (terms[j] && haystack.indexOf(terms[j]) < 0) { matches = false; break }
+      }
+      if (!matches) continue
+      rows.push({ entry: entry, name: name.toLowerCase() })
+    }
+    rows.sort(function(a, b) {
+      if (a.name < b.name) return -1
+      if (a.name > b.name) return 1
+      return 0
+    })
+    return rows
+  }
+
+  function removeEntry(entry) {
+    if (!entry) return
+    if (root.appLibrary) {
+      root.appLibrary.remove(entry.id, root.appLibrary.entryName(entry))
+      return
+    }
+    var id = String(entry.id || "")
+    if (!id) return
+    Util.execDetached("omarchy-remove-launcher-entry " + Util.shellQuote(id) + " " + Util.shellQuote(root.entryName(entry)))
+  }
+
   function launchEntry(entry) {
-    if (entry && root.appLibrary) root.appLibrary.launch(entry.id, entry.name)
+    if (!entry) return
+    if (root.appLibrary) {
+      root.appLibrary.launch(entry.id, entry.name)
+      return
+    }
+    var id = String(entry.id || "")
+    if (!id) return
+    // A terminal entry goes through Omarchy's TUI launcher so its window can
+    // be named after the command; everything else resolves through
+    // gtk-launch inside a uwsm scope, keeping ids like org.telegram.desktop.
+    var command = entry.runInTerminal
+      ? (entry.command || []).filter(function(word) { return !/^%[a-zA-Z]$/.test(String(word)) })
+      : []
+    if (command.length > 0) {
+      Util.execDetached("omarchy-launch-tui " + command.map(function(word) { return Util.shellQuote(word) }).join(" "))
+      return
+    }
+    var desktopId = id.slice(-8) === ".desktop" ? id : id + ".desktop"
+    Util.execDetached("uwsm-app -- gtk-launch " + Util.shellQuote(desktopId))
   }
 
   function activate(item) {
