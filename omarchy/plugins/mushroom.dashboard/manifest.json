@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "mushroom.dashboard",
+  "name": "Mushroom Grove Dashboard",
+  "version": "1.0.0",
+  "author": "mushroom",
+  "description": "Weather and news dashboard on a dedicated special workspace, opened from the bar's mushroom tab",
+  "kinds": [
+    "panel"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "panel": "Dashboard.qml"
+  }
+}

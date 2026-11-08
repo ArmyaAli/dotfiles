@@ -1,0 +1,136 @@
+[bar]
+background = "#171310"
+background-alpha = 0.78
+text = "#f4e4c1"
+active = "#ff8972"
+scale-with-font = false
+size-horizontal = 38
+size-vertical = 40
+
+[hyprland]
+active-border = "#e86f5a"
+active-border-foreground = "#f4e4c1"
+
+[controls]
+normal-color = "#f4e4c1"
+normal-fill-alpha = 0.07
+normal-border = "#9dbb6d"
+normal-border-width = 1
+normal-border-alpha = 0.34
+hover-cursor-color = "#fff6df"
+hover-cursor-fill-alpha = 0.14
+hover-cursor-border = "#e5b65d"
+hover-cursor-border-width = 1
+hover-cursor-border-alpha = 0.72
+focus-color = "#fff6df"
+focus-fill-alpha = 0.16
+focus-border = "#72b39e"
+focus-border-width = 2
+focus-border-alpha = 0.9
+selected-color = "#fff6df"
+selected-fill-alpha = 0.22
+selected-border = "#e86f5a"
+selected-border-width = 2
+selected-border-alpha = 0.9
+pressed-fill-alpha = 0.28
+selection-fill-alpha = 0.36
+
+[spacing]
+scale = 1.0
+scale-with-font = true
+control-gap = 7
+control-padding-x = 11
+control-padding-y = 7
+control-height = 30
+panel-gap = 14
+panel-padding = 18
+popup-padding = 14
+
+[font]
+base-size = 12
+
+[popups]
+background = "#171310"
+background-alpha = 0.94
+text = "#f4e4c1"
+border = "#72b39e"
+border-alpha = 0.78
+border-width = 2
+
+[tooltip]
+background = "#2a211d"
+background-alpha = 0.96
+text = "#fff6df"
+border = "#e5b65d"
+border-alpha = 0.7
+
+[notifications]
+background = "#171310"
+background-alpha = 0.94
+text = "#f4e4c1"
+border = "#e86f5a"
+border-alpha = 0.82
+border-width = 2
+countdown = "#e5b65d"
+
+[launcher]
+background = "#171310"
+background-alpha = 0.94
+text = "#f4e4c1"
+border = "#72b39e"
+border-alpha = 0.82
+scrim = "#0b0908"
+scrim-alpha = 0.56
+selected-background = "#e86f5a"
+selected-background-alpha = 0.2
+selected-text = "#fff6df"
+selected-border = "#e5b65d"
+selected-border-alpha = 0.8
+
+[menu]
+background = "#171310"
+background-alpha = 0.95
+text = "#f4e4c1"
+border = "#72b39e"
+border-alpha = 0.82
+scrim = "#0b0908"
+scrim-alpha = 0.5
+selected-background = "#e86f5a"
+selected-background-alpha = 0.2
+selected-text = "#fff6df"
+selected-border = "#e5b65d"
+selected-border-alpha = 0.8
+
+[polkit]
+background = "#171310"
+background-alpha = 0.96
+text = "#f4e4c1"
+text-error = "#ff8972"
+border = "#72b39e"
+border-error = "#ff8972"
+border-alpha = 0.9
+scrim = "#0b0908"
+scrim-alpha = 0.62
+accent = "#e5b65d"
+
+[lock]
+background = "#171310"
+background-alpha = 0.84
+text = "#f4e4c1"
+placeholder = "#9f9077"
+text-error = "#ff8972"
+border = "#69745d"
+border-active = "#72b39e"
+border-error = "#ff8972"
+border-alpha = 0.9
+selection = "#e86f5a"
+selection-alpha = 0.45
+
+[image-picker]
+scrim = "#0b0908"
+scrim-alpha = 0.58
+text = "#f4e4c1"
+selected-border = "#e86f5a"
+selected-border-alpha = 1.0
+unselected-border = "#9dbb6d"
+unselected-border-alpha = 0.4

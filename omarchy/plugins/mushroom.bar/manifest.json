@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "mushroom.bar",
+  "name": "Mushroom Grove Bar",
+  "version": "1.0.0",
+  "author": "Omarchy",
+  "description": "Rounded translucent status bar with circular mushroom-grove controls",
+  "kinds": [
+    "bar"
+  ],
+  "entryPoints": {
+    "bar": "Bar.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.bar"
+  }
+}

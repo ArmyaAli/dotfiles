@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "mushroom.dock",
+  "name": "Mushroom Grove Dock",
+  "version": "1.0.0",
+  "author": "mushroom",
+  "description": "Minimal floating dock with mushroom-grove theming, proximity magnification, and a Super-key peek",
+  "kinds": [
+    "panel"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "panel": "Dock.qml"
+  }
+}
