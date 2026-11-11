@@ -1,0 +1,21 @@
+#!/bin/bash
+# SUPER + SPACE: one tap opens the Omarchy menu; a second tap within the
+# double-tap window (400 ms by default) closes it and opens the fuzzy
+# running-window picker instead.
+set -u
+
+state="${XDG_RUNTIME_DIR:-/tmp}/omarchy-space-double"
+now=$(date +%s%3N)
+last=$(cat "$state" 2>/dev/null || printf '0')
+window_ms=${OMARCHY_DOUBLE_TAP_MS:-400}
+
+if (( now - last <= window_ms )); then
+  rm -f "$state"
+  [[ ${OMARCHY_SPACE_DRY:-0} == 1 ]] && { echo picker; exit 0; }
+  omarchy-menu close >/dev/null 2>&1 || true
+  exec omarchy-window-picker
+fi
+
+printf '%s' "$now" >"$state"
+[[ ${OMARCHY_SPACE_DRY:-0} == 1 ]] && { echo menu; exit 0; }
+exec omarchy-menu toggle root

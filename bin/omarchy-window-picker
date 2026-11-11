@@ -1,0 +1,76 @@
+#!/bin/bash
+# Fuzzy running-window picker, opened by a double tap of SUPER + SPACE.
+# Lists mapped windows on regular workspaces, most recently focused first;
+# fzf-style matching against "<title> · <class> · workspace <name>".
+# Pass --print to dump the candidate rows instead of opening the picker.
+set -u
+
+clients=$(hyprctl clients -j) || exit 1
+
+lines=$(
+  jq -r '
+    [.[]
+      | select(.mapped)
+      | select(.workspace.id > 0)]
+    | sort_by(.focusHistoryID)
+    | .[]
+    | [.address, ("\(.title) · \(.class) · workspace \(.workspace.name)")]
+    | @tsv
+  ' <<<"$clients"
+) || exit 1
+
+[[ -n $lines ]] || exit 0
+
+if [[ ${1:-} == "--print" ]]; then
+  printf '%s\n' "$lines"
+  exit 0
+fi
+
+# Match the picker to the active Omarchy theme when its colors are readable.
+theme_colors="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme/colors.toml"
+if [[ ! -f $theme_colors ]]; then
+  theme_name=$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme.name" 2>/dev/null || true)
+  theme_colors="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/themes/$theme_name/colors.toml"
+fi
+
+color() {
+  [[ -f $theme_colors ]] || return 1
+  local value
+  value=$(awk -F'"' -v key="$1" '$1 ~ "^" key "[[:space:]]*=" { print $2; exit }' "$theme_colors")
+  [[ $value =~ ^#[0-9a-fA-F]{6}$ ]] || return 1
+  printf '%sff' "$value"
+}
+
+args=(
+  --dmenu
+  --with-nth=2
+  --accept-nth=1
+  --match-nth=2
+  --match-mode=fzf
+  --prompt="Window: "
+  --placeholder="type to filter running windows"
+  --lines=12
+  --width=72
+  --counter
+  --border-radius=12
+  --selection-radius=8
+  --horizontal-pad=24
+  --vertical-pad=12
+  --inner-pad=8
+)
+
+if value=$(color background); then args+=(--background-color="$value"); fi
+if value=$(color foreground); then args+=(--text-color="$value" --input-color="$value"); fi
+if value=$(color accent); then args+=(--prompt-color="$value" --match-color="$value" --selection-match-color="$value" --border-color="$value"); fi
+if value=$(color selection); then args+=(--selection-color="$value"); fi
+if value=$(color foreground); then args+=(--selection-text-color="$value"); fi
+if value=$(color muted); then args+=(--placeholder-color="$value" --counter-color="$value"); fi
+
+address=$(
+  printf '%s\n' "$lines" |
+    fuzzel "${args[@]}"
+) || exit 0
+
+[[ -n ${address:-} ]] || exit 0
+
+hyprctl dispatch "hl.dsp.focus({ window = \"address:$address\" })" >/dev/null 2>&1 || true

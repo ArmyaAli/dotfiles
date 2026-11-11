@@ -3,3 +3,6 @@
 vagrant/.vagrant/
 vagrant/.env
 .codex
+
+# Timestamped backups
+hypr/*.bak.*

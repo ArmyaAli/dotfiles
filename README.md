@@ -45,6 +45,18 @@ Personal shell, terminal, Neovim, and Omarchy desktop configuration.
 |   |   `-- mushroom.workspaces/
 |   `-- themes/
 |       `-- mushroom-grove/
+|-- hypr/
+|   |-- hyprland.lua
+|   |-- bindings.lua
+|   |-- input.lua
+|   |-- looknfeel.lua
+|   |-- autostart.lua
+|   |-- monitors.lua
+|   |-- xdph.conf
+|   `-- hyprsunset.conf
+|-- bin/
+|   |-- omarchy-space-double
+|   `-- omarchy-window-picker
 |-- scripts/
 |   |-- bootstrap-ansible-child-node.sh
 |   `-- setup-wsl-ubuntu.sh
@@ -277,11 +289,23 @@ Custom hooks plus locally edited samples:
 
 ```bash
 rsync -a omarchy/ ~/.config/omarchy/
+rsync -a hypr/ ~/.config/hypr/
+mkdir -p ~/.local/bin
+install -m755 bin/omarchy-space-double bin/omarchy-window-picker ~/.local/bin/
+omarchy theme set mushroom-grove
 omarchy restart shell
 ```
 
-`omarchy/shell.json` already disables the built-in `omarchy.dock` and enables
-the vendored `mushroom.dock` clone, so the restored dock is the themed one.
+- `~/.local/state/omarchy/current/` is generated state and is not tracked.
+  `omarchy theme set mushroom-grove` recreates it: the wallpaper symlink and the
+  app theme files (`alacritty.toml`, `btop.theme`, `chromium.theme`, `foot.ini`,
+  `ghostty.conf`, `fcitx5-theme.conf`, …).
+- `omarchy/shell.json` already disables the built-in `omarchy.dock` and enables
+  the vendored `mushroom.dock` clone, so the restored dock is the themed one.
+- `hyprctl reload` picks up `~/.config/hypr` changes without restarting the
+  session.
+- `bin/` scripts must stay on `PATH` via `~/.local/bin`, which the Omarchy
+  session already includes.
 
 Third-party webcam plugin is not vendored; re-clone it before restarting:
 
@@ -290,7 +314,59 @@ git clone https://github.com/kristoferlund/omarchy-webcam.git \
   ~/.config/omarchy/plugins/io.github.kristoferlund.webcam
 ```
 
+Dock pins are app ids from `shell.json` (`chromium`, `wezterm`, `Nautilus`,
+`obsidian`, `signal`, `Discord`, `OBS`, `kdenlive`, `mpv`, `Moonlight`). Missing
+apps restore as missing discs; install them to match the bar/dock exactly.
+
+## Hyprland config
+
+Mirror of `~/.config/hypr` (timestamped `.bak.*` backups excluded). Loaded by
+`hyprland.lua` after Omarchy's defaults, so these files win over both the
+defaults and the theme's `hyprland.lua`.
+
+### `hypr/looknfeel.lua`
+Sharp corners with tight outer margins: `decoration.rounding = 0` and
+`gaps_out = { top = 10, right = 0, bottom = 4, left = 0 }`. This overrides the
+theme's `rounding = 10`, so the live desktop has square window corners even
+though `themes/mushroom-grove/hyprland.lua` sets rounding.
+
+### `hypr/bindings.lua`
+- `SUPER + J`: consume/expel a column in the scrolling layout, `togglesplit` in dwindle.
+- `SUPER + mouse_down`/`mouse_up`: scroll the scrolling-layout strip (defaults unbound).
+- `SUPER + SUPER_L`: peek `mushroom.dock`; `SUPER + A`: cycle dock apps.
+- `SUPER + SPACE`: `omarchy-space-double` — tap opens the Omarchy menu, double tap
+  opens `omarchy-window-picker`.
+- `SUPER + H`: toggle `mushroom.dashboard`.
+- `SUPER + CTRL + X`, `F9`: dictation, bound only when dictation is installed.
+
+### `hypr/input.lua`
+Natural two-finger scrolling; three-finger horizontal `SUPER` gesture scrolls the
+window strip; `move_snap_to_grid`/`move_snap_cursor` snap each gesture to the
+nearest column and move focus to it.
+
+### `hypr/autostart.lua`
+Focuses the `home` workspace shortly after login, which shows the dashboard.
+
+### `hypr/monitors.lua`
+`GDK_SCALE=2` and the preferred mode at scale `1.6`. Machine-specific — adjust
+for other displays.
+
+### `hypr/xdph.conf`, `hypr/hyprsunset.conf`
+Screencopy uses `hyprland-preview-share-picker`; hyprsunset starts with an
+identity profile at 07:00 (automatic nightlight is commented out).
+
 ## Scripts
+
+### `bin/omarchy-space-double`
+First tap runs `omarchy-menu toggle root`; a second tap within 400 ms
+(`OMARCHY_DOUBLE_TAP_MS`) closes the menu and runs `omarchy-window-picker`.
+`OMARCHY_SPACE_DRY=1` prints `menu`/`picker` instead of executing.
+
+### `bin/omarchy-window-picker`
+Lists mapped windows on regular workspaces via `hyprctl clients`, most recently
+focused first, and matches `<title> · <class> · workspace <name>` with `fuzzel`.
+Colors come from the active theme's `colors.toml`; `--print` dumps the rows.
+Needs `jq`, `fuzzel`, and Hyprland.
 
 ### `scripts/bootstrap-ansible-child-node.sh`
 General-purpose Linux bootstrap for Ansible-managed child nodes (not Vagrant-specific):
