@@ -97,12 +97,17 @@ Item {
 
   readonly property int lowPopupDuration: 5000
   readonly property int normalPopupDuration: 8000
+  // Critical notifications are the ones the spec lets live forever, and
+  // Omarchy/upstream honor that with a 0 duration. A toast that never leaves
+  // piles up on top of the bar, so keep it longer than a normal one but still
+  // finite; a sender-requested timeout can extend it up to maxPopupDuration.
+  readonly property int criticalPopupDuration: 15000
   readonly property int maxPopupDuration: 30000
 
   function durationFor(urgency, expireTimeout) {
     switch (urgency) {
     case NotificationUrgency.Critical:
-      return 0
+      return Math.min(maxPopupDuration, Math.max(criticalPopupDuration, requestedDuration(expireTimeout)))
     case NotificationUrgency.Low:
       return Math.min(maxPopupDuration, Math.max(lowPopupDuration, requestedDuration(expireTimeout)))
     default:
