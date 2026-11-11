@@ -91,7 +91,7 @@
       "tray": []
     },
     "position": "top",
-    "transparent": true
+    "transparent": false
   },
   "cloneSourceRestores": [
     "mushroom.notifications",
