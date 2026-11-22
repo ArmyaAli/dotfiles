@@ -40,6 +40,11 @@ o.bind("SUPER + J", "Toggle window split/column", function()
   end
 end)
 
+-- The Keychron knob's press sends XF86AudioMute. Route that press to the same
+-- capture PRINT uses (it was: Mute). Volume up/down on the twist are untouched;
+-- SHIFT + knob still switches audio output.
+o.rebind("XF86AudioMute", "Screenshot (knob press)", "omarchy-capture-screenshot")
+
 -- Logitech MX Keys examples:
 -- o.bind("SUPER + SHIFT + S", nil, "omarchy-capture-screenshot")
 -- o.bind("SUPER + H", nil, "voxtype record toggle")

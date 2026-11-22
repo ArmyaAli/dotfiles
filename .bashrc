@@ -1,27 +1,18 @@
-# .bashrc
+# Omarchy environment (OMARCHY_PATH + PATH), needed even for non-interactive shells
+[[ -r /usr/share/omarchy/default/bash/env-bootstrap ]] && source /usr/share/omarchy/default/bash/env-bootstrap
 
-# Load central setup.
+# Nix profile on PATH (profile.d only runs for login shells; terminals spawn non-login)
+[[ -r /etc/profile.d/nix-daemon.sh ]] && source /etc/profile.d/nix-daemon.sh
 
-if [ -f /eecs/local/share/bashrc.common ]; then
-  . /eecs/local/share/bashrc.common
-fi
+# If not running interactively, don't do anything else (leave this above the rc source)
+[[ $- != *i* ]] && return
 
-# For tmux being used in conjuction with Neovim
-# Path Variables
-export TERM='xterm-256color'
-export EDITOR='nvim'
-export VISUAL='nvim'
+# All the default Omarchy aliases and functions
+# (don't mess with these directly, just overwrite them here!)
+source "$OMARCHY_PATH/default/bash/rc"
 
-# set bash to vim mode
+# Add your own exports, aliases, and functions here.
+#
+# Make an alias for invoking commands you use constantly
+# alias p='python'
 set -o vi
-
-# The default umask creates files which are not readable by group or others.
-# Uncomment the following to make created files readable by group or others.
-#umask 022
-
-
-set $PATH:/eecs/local/pkg/gcc-12.3.0/bin
-
-# My terminal anchor
-PS1='\u@\h: \w\$ '
-

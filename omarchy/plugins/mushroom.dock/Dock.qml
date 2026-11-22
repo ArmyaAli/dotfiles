@@ -376,6 +376,27 @@ Item {
     root.dismissSerial++
   }
 
+  // A session off switch for the dock: switched off, it stops appearing on a
+  // floating workspace or at the pointer's edge, while a peek still brings it
+  // up so this very toggle can be reached to switch it back on.
+  property bool dockEnabled: true
+
+  function setDockEnabled(value) {
+    var enabled = !!value
+    if (root.dockEnabled === enabled) return
+    root.dockEnabled = enabled
+    if (enabled) {
+      root.peek()
+    } else {
+      root.alwaysVisible = false
+      root.dismiss()
+    }
+  }
+
+  function toggleDockEnabled() {
+    root.setDockEnabled(!root.dockEnabled)
+  }
+
   // A flat list of every running window, grouped by app in dock order, so the
   // Super+A cursor visits each instance in turn rather than jumping between
   // apps.
@@ -564,6 +585,10 @@ Item {
     }
     function peek(): string { root.peek(); return "ok" }
     function dismiss(): string { root.dismiss(); return "ok" }
+    function toggleEnabled(): string {
+      root.toggleDockEnabled()
+      return root.dockEnabled ? "enabled" : "disabled"
+    }
     function cycle(step: string): string {
       return root.cycleApp(Number(step) < 0 ? -1 : 1) ? "ok" : "none"
     }

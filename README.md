@@ -69,14 +69,13 @@ Personal shell, terminal, Neovim, and Omarchy desktop configuration.
 ## Dotfiles
 
 ### `.bashrc`
-- Sources `/eecs/local/share/bashrc.common` when present.
-- Sets:
-  - `TERM=xterm-256color`
-  - `EDITOR=nvim`
-  - `VISUAL=nvim`
+- Sources Omarchy's `env-bootstrap` for `OMARCHY_PATH` and `PATH` even in
+  non-interactive shells.
+- Adds the Nix profile from `/etc/profile.d/nix-daemon.sh`, since terminals
+  spawn non-login shells.
+- Returns early when not interactive.
+- Sources Omarchy's default bash aliases/functions.
 - Enables Vim-style shell editing (`set -o vi`).
-- Defines prompt as `\u@\h: \w\$ `.
-- Includes a GCC path line intended to add `/eecs/local/pkg/gcc-12.3.0/bin`.
 
 ### `Microsoft.PowerShell_profile.ps1`
 - Adds alias: `make -> mingw32-make.exe`.
@@ -85,7 +84,8 @@ Personal shell, terminal, Neovim, and Omarchy desktop configuration.
 ### `wezterm.lua`
 - Auto-reloads config changes.
 - Uses color scheme: `Gruvbox dark, hard (base16)`.
-- Starts in PowerShell with default cwd `C:\dev`.
+- Runs Wayland-native on Omarchy (`enable_wayland = true`).
+- Starts the login shell in the app's current directory.
 - Keeps close confirmation prompt enabled.
 - Sets window padding.
 - Adds a Neovim-like pane control key table triggered by `ALT+SHIFT+w`:
@@ -189,29 +189,29 @@ Personal shell, terminal, Neovim, and Omarchy desktop configuration.
 
 Mirror of `~/.config/omarchy` on the Omarchy (Arch + Hyprland) machine. Runtime
 state, `.git` directories, timestamped `.bak.*` backups, all `.sample`
-templates, and the third-party `io.github.kristoferlund.webcam` plugin clone are
-excluded.
+templates, and third-party plugin clones (`io.github.kristoferlund.webcam`,
+`crmne.omastats`, `superwhisper.panel`) are excluded.
 
 ### `omarchy/shell.json`
 - Omarchy shell (Quickshell) settings:
   - Idle: screensaver at 150s, lock at 300s.
-  - Top bar, transparent, centered on `omarchy.clock` (`dddd HH:mm`, alt `d MMMM 'W'ww yyyy`).
+  - Top bar, opaque, centered on `omarchy.clock` (`dddd HH:mm`, alt `d MMMM 'W'ww yyyy`).
   - Left: `omarchy.menu`, `mushroom.workspaces`.
-  - Center: `omarchy.indicators`, `omarchy.clock`, `omarchy.elsewhen` (Toronto,
+  - Center: `omarchy.clock`, `omarchy.indicators`, `omarchy.elsewhen` (Toronto,
     London, Dubai, Tokyo, Los Angeles), `omarchy.weather`, `omarchy.system-update`.
-  - Right: keyboard layout, tray, webcam, tailscale, agents, bluetooth, network,
-    audio, monitor, power.
+  - Right: keyboard layout, tray, OmaStats (CPU), webcam, tailscale, agents,
+    bluetooth, network, audio, monitor, power.
+  - Tray: `superwhisper.panel`.
   - Bar plugin: `mushroom.bar`.
   - Plugins: `mushroom.dock`, `mushroom.dashboard`, `mushroom.notifications`.
-  - Dock (`mushroom.dock`, a clone of `omarchy.dock`): bottom edge, auto-hide
-    off, pinned apps chromium, wezterm, Nautilus, obsidian, signal, Discord,
-    OBS, kdenlive, mpv, Moonlight.
+  - Dock (`mushroom.dock`, a clone of `omarchy.dock`): bottom edge, pinned apps
+    foot, Brave, Nautilus, Obsidian.
   - Disabled: `omarchy.notifications` and the dock source `omarchy.dock`
     (replaced by the clone); clone sources restorable: `mushroom.notifications`,
     `mushroom.dock`.
 
 ### `omarchy/shell.toml`
-- Sets shell font `base-size = 11`.
+- Sets shell font `base-size = 12`.
 
 ### `omarchy/themes/mushroom-grove/`
 Custom dark theme:
@@ -254,14 +254,16 @@ Mushroom styling and behavior:
   room, computed against the unmagnified slot grid.
 - One shared hover label (`Name · N windows`).
 - Tucked off the edge by default away from floating workspaces; reveals on a
-  `Super` tap, at the dock edge, via IPC, or pins open. While tucked, only the
-  hair-thin edge strip takes input, so the desktop stays click-through.
+  `Super` tap, at the dock edge, via IPC, or pins open. The edge strip is 3px
+  and needs a 260ms rest, so crossing a window's bottom edge does not summon it.
+- A session off switch (`toggleEnabled`) suppresses floating/edge reveals while
+  keeping a peek available so it can be switched back on.
 
 Launcher disc: left click opens the Omarchy menu, right click a terminal,
 middle click the stock app grid, `Shift`+left the stock dock settings menu.
 
 IPC:
-- `omarchy-shell mushroom-dock peek|dismiss|toggle|show|hide|cycle <1|-1>|pin <id>|apps|refresh|ping`
+- `omarchy-shell mushroom-dock peek|dismiss|toggle|show|hide|cycle <1|-1>|pin <id>|apps|refresh|ping|toggleEnabled`
 - `omarchy-shell omarchy.dock refresh|apps` (built-in ids route to the clone).
 
 Hyprland bindings (`~/.config/hypr/bindings.lua`):
@@ -283,7 +285,7 @@ Custom hooks plus locally edited samples:
 
 ### `omarchy/branding/`, `omarchy/defaults/`, `omarchy/extensions/`
 - `branding/about.txt`, `branding/screensaver.txt`: custom about/screensaver text.
-- `defaults/agent` (`omp`), `defaults/dictation` (`voxtype`): chosen defaults.
+- `defaults/agent` (`omp`), `defaults/dictation` (`superwhisper`): chosen defaults.
   `omp` is what `SUPER + grave` (quake console) and `omarchy agent` launch.
 - `extensions/omarchy-menu.jsonc`: launcher/menu extension file.
 
@@ -309,16 +311,21 @@ omarchy restart shell
 - `bin/` scripts must stay on `PATH` via `~/.local/bin`, which the Omarchy
   session already includes.
 
-Third-party webcam plugin is not vendored; re-clone it before restarting:
+Third-party plugins are not vendored; restore them before restarting:
 
 ```bash
 git clone https://github.com/kristoferlund/omarchy-webcam.git \
   ~/.config/omarchy/plugins/io.github.kristoferlund.webcam
+git clone https://github.com/crmne/omastats.git \
+  ~/.config/omarchy/plugins/crmne.omastats
 ```
 
-Dock pins are app ids from `shell.json` (`chromium`, `wezterm`, `Nautilus`,
-`obsidian`, `signal`, `Discord`, `OBS`, `kdenlive`, `mpv`, `Moonlight`). Missing
-apps restore as missing discs; install them to match the bar/dock exactly.
+`superwhisper.panel` comes with the Superwhisper app and is symlinked from
+`/opt/superwhisper/assets/omarchy-plugin/superwhisper-panel`.
+
+Dock pins are app ids from `shell.json` (`foot`, `brave-browser`,
+`org.gnome.Nautilus`, `obsidian`). Missing apps restore as missing discs;
+install them to match the bar/dock exactly.
 
 ## Hyprland config
 
@@ -332,9 +339,21 @@ Sharp corners with tight outer margins: `decoration.rounding = 0` and
 theme's `rounding = 10`, so the live desktop has square window corners even
 though `themes/mushroom-grove/hyprland.lua` sets rounding.
 
+### `hypr/hyprland.lua`
+- Adds `/var/lib/flatpak/exports/share` to `XDG_DATA_DIRS` so Flatpak apps
+  (Stremio) appear in the Omarchy launcher even when the session did not run
+  `/etc/profile.d/flatpak.sh`.
+- Holds an idle inhibitor while `com.stremio.Stremio` is fullscreen, so video
+  playback does not trigger the screensaver or lock.
+- Guards Hyprland 0.56.2's scrolling-layout float crash (upstream
+  `hyprwm/Hyprland#16121`): layout cycles route through dwindle, and `SUPER + T`
+  / `SUPER + O` refuse to float on a scrolling workspace with a notification.
+  Remove once upstream is fixed.
+
 ### `hypr/bindings.lua`
 - `SUPER + J`: consume/expel a column in the scrolling layout, `togglesplit` in dwindle.
 - `SUPER + mouse_down`/`mouse_up`: scroll the scrolling-layout strip (defaults unbound).
+- `XF86AudioMute` (Keychron knob press): screenshot, replacing the default mute.
 - `SUPER + SUPER_L`: peek `mushroom.dock`; `SUPER + A`: cycle dock apps.
 - `SUPER + SPACE`: `omarchy-space-double` — tap opens the Omarchy menu, double tap
   opens `omarchy-window-picker`.
@@ -350,8 +369,9 @@ nearest column and move focus to it.
 Focuses the `home` workspace shortly after login, which shows the dashboard.
 
 ### `hypr/monitors.lua`
-`GDK_SCALE=2` and the preferred mode at scale `1.6`. Machine-specific — adjust
-for other displays.
+Both Acer SH272U panels run `2560x1440@100` at scale `1` (`DP-2` left, `DP-1`
+right); the EDID preferred timing is 60Hz, so the mode is explicit. `GDK_SCALE=2`
+sizes X11/XWayland windows. Machine-specific — adjust for other displays.
 
 ### `hypr/xdph.conf`, `hypr/hyprsunset.conf`
 Screencopy uses `hyprland-preview-share-picker`; hyprsunset starts with an

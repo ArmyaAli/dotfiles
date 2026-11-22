@@ -5,13 +5,13 @@
     "layout": {
       "center": [
         {
-          "id": "omarchy.indicators"
-        },
-        {
           "format": "dddd HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
           "id": "omarchy.clock",
           "verticalFormat": "HH\n—\nmm"
+        },
+        {
+          "id": "omarchy.indicators"
         },
         {
           "id": "omarchy.elsewhen",
@@ -63,8 +63,15 @@
           "id": "omarchy.tray"
         },
         {
+          "id": "crmne.omastats",
+          "barLabels": "icon",
+          "modules": "cpu",
+          "cpuStyle": "text"
+        },
+        {
           "device": "",
-          "id": "io.github.kristoferlund.webcam"
+          "id": "io.github.kristoferlund.webcam",
+          "resolution": ""
         },
         {
           "id": "omarchy.tailscale"
@@ -88,7 +95,11 @@
           "id": "omarchy.power"
         }
       ],
-      "tray": []
+      "tray": [
+        {
+          "id": "superwhisper.panel"
+        }
+      ]
     },
     "position": "top",
     "transparent": false
@@ -102,18 +113,12 @@
     "omarchy.dock"
   ],
   "dock": {
-    "autohide": false,
+    "autohide": true,
     "pinned": [
-      "chromium",
-      "org.wezfurlong.wezterm",
+      "foot",
+      "brave-browser",
       "org.gnome.Nautilus",
-      "obsidian",
-      "signal",
-      "Discord",
-      "com.obsproject.Studio",
-      "org.kde.kdenlive",
-      "mpv",
-      "com.moonlight_stream.Moonlight"
+      "obsidian"
     ],
     "position": "bottom"
   },

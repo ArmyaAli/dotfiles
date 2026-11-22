@@ -42,9 +42,12 @@ PanelWindow {
   // pinned open with the IPC toggle, for a moment after a peek, and while the
   // pointer holds its edge.
   readonly property bool pinnedOpen: !!dock && dock.alwaysVisible
+  // Switched off for the session by the dock's own small toggle. A peek still
+  // surpasses it, so the toggle can always be reached to switch it back on.
+  readonly property bool dockEnabled: !dock || dock.dockEnabled
   readonly property bool floatingShown: !!dock && dock.isFloating(workspaceId) && fullscreenMode < 2
   property bool peekRevealed: false
-  readonly property bool shown: floatingShown || pinnedOpen || peekRevealed || revealed
+  readonly property bool shown: peekRevealed || (dockEnabled && (floatingShown || pinnedOpen || revealed))
   // With auto-hide on, the dock waits off screen until the pointer reaches its
   // edge, and stays while the pointer, a menu, or a drag still needs it. A
   // maximized window hides the dock the same way, so it can still be called up.
@@ -187,7 +190,7 @@ PanelWindow {
   // The slot a point along the dock falls before, counting from the first app.
   function slotIndexAt(point) {
     var along = window.vertical ? point.y : point.x
-    var first = window.slotSize
+    var first = window.slotSize * 2
     var count = window.dock ? window.dock.itemModel.count : 0
     return Math.max(0, Math.min(count, Math.round((along - first) / window.slotSize)))
   }
@@ -303,9 +306,11 @@ PanelWindow {
   mask: Region {
     item: window.contentShown ? body : null
 
-    // While the pill is tucked away only its edge strip takes input, so the
-    // rest of the screen stays click-through.
-    Region { item: window.contentShown ? null : edgeTrigger }
+    // The edge strip takes input whether the pill is tucked or shown. While
+    // shown it is what holds the hover that keeps the pill open, so resting on
+    // the very edge cannot flicker it in and out; while tucked it is the only
+    // thing that takes input, and the rest of the screen stays click-through.
+    Region { item: window.dockEnabled ? edgeTrigger : null }
     Region { item: menu.visible ? menu : null }
   }
 
@@ -321,11 +326,22 @@ PanelWindow {
     }
   }
 
+  // A short rest on the edge before the pill comes up. Crossing the bottom of
+  // a window, or clicking near it while working, must not summon the dock over
+  // the content; holding the pointer on the edge on purpose still does.
+  Timer {
+    id: revealTimer
+    interval: 260
+    onTriggered: if (edgeHover.hovered && window.dockEnabled) window.revealed = true
+  }
+
   // The strip along the screen edge that brings an auto-hidden dock back.
   Item {
     id: edgeTrigger
 
-    readonly property int depth: window.gap + Style.spacing.xxs
+    // Narrow enough that a click on a window's bottom-edge control misses it,
+    // wide enough to catch the pointer when aimed at the screen edge.
+    readonly property int depth: 3
 
     x: window.position === "left" ? 0 : window.position === "right" ? window.width - depth : body.x
     y: window.position === "top" ? 0 : window.position === "bottom" ? window.height - depth : body.y
@@ -335,10 +351,11 @@ PanelWindow {
     HoverHandler {
       id: edgeHover
       onHoveredChanged: {
-        if (hovered) {
+        if (hovered && window.dockEnabled) {
           peekTimer.stop()
-          window.revealed = true
+          revealTimer.restart()
         } else {
+          revealTimer.stop()
           hideTimer.restart()
         }
       }
@@ -420,7 +437,7 @@ PanelWindow {
       onHoveredChanged: {
         window.pointerInDock = hovered
         if (!hovered) window.pointerX = -100000
-        if (hovered) window.revealed = true
+        if (hovered && window.dockEnabled) window.revealed = true
         window.updateReveal()
       }
       // Only a real move clears it: the release itself reports the pointer too.
@@ -436,7 +453,9 @@ PanelWindow {
       id: slots
       x: window.padH
       y: window.padV
-      columns: window.vertical ? 1 : appRepeater.count + 1
+      columns: window.vertical ? 1 : appRepeater.count + 2
+
+      ToggleSlot {}
 
       AppsSlot {}
 
@@ -513,6 +532,44 @@ PanelWindow {
     }
   }
 
+  // The small control left of the launcher disc switches the dock off for the
+  // session. With it off, the SUPER peek still brings the dock up, so the same
+  // control switches it back on.
+  component ToggleSlot: Slot {
+    id: toggleSlot
+
+    // A down chevron turned to the edge the dock hangs from.
+    readonly property int glyphRotation: window.position === "top" ? 180
+      : window.position === "left" ? 90
+      : window.position === "right" ? -90
+      : 0
+
+    mouse.onEntered: {
+      window.hoverName = window.dockEnabled ? "Hide dock" : "Show dock"
+      window.hoverCount = 0
+      window.hoverSlot = toggleSlot
+    }
+    mouse.onExited: {
+      if (window.hoverSlot === toggleSlot) window.hoverSlot = null
+    }
+    mouse.onClicked: function(event) {
+      if (event.button !== Qt.LeftButton) return
+      window.closeMenu()
+      if (window.dock) window.dock.toggleDockEnabled()
+    }
+
+    Text {
+      anchors.centerIn: parent
+      text: "󰅀"
+      rotation: toggleSlot.glyphRotation
+      color: Util.alpha(window.pillSkin, toggleSlot.hovered ? 0.8 : 0.4)
+      font.family: Style.font.family
+      font.pixelSize: Math.round(window.iconSize * 0.46)
+
+      Behavior on color { ColorAnimation { duration: Style.duration(140); easing.type: Easing.OutCubic } }
+    }
+  }
+
   component AppsSlot: Slot {
     id: appsSlot
 
@@ -581,7 +638,7 @@ PanelWindow {
 
     // Proximity magnification reads the pointer's place along the dock; the
     // slot widens as its disc grows so neighbours make room.
-    readonly property real magnify: window.scaleFor(index + 1)
+    readonly property real magnify: window.scaleFor(index + 2)
     readonly property bool running: windowCount > 0
     readonly property bool focused: {
       if (!modelData) return false

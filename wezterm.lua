@@ -6,8 +6,12 @@ local act = wezterm.action
 
 config.automatically_reload_config = true
 config.color_scheme = 'Gruvbox dark, hard (base16)'
-config.default_prog = { 'powershell' }
-config.default_cwd = "C:\\dev"
+
+-- Wayland-native on Omarchy; no XWayland round trip.
+config.enable_wayland = true
+
+-- The dotfiles version starts PowerShell in C:\dev for Windows. Here the
+-- terminal starts the login shell in the app's current directory instead.
 config.window_close_confirmation = 'AlwaysPrompt'
 
 config.window_padding = {
