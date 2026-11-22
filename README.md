@@ -232,7 +232,9 @@ User-authored Quickshell plugins:
   `omarchy.clonedFrom`, so the built-in is disabled and built-in IPC ids route
   here) with the mushroom-grove look and on-demand behavior layered on.
 - `mushroom.notifications`: notification service and card components.
-- `mushroom.workspaces`: workspace widget.
+- `mushroom.workspaces`: workspace widget. Each monitor's bar shows that
+  monitor's own 1-10 block and highlights the workspace that monitor shows,
+  independent of which output has focus.
 
 ### Dock (`mushroom.dock`)
 
