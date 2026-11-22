@@ -345,6 +345,9 @@ though `themes/mushroom-grove/hyprland.lua` sets rounding.
   `/etc/profile.d/flatpak.sh`.
 - Holds an idle inhibitor while `com.stremio.Stremio` is fullscreen, so video
   playback does not trigger the screensaver or lock.
+- Inhibits idle while a Steam/Proton game (`steam_app_*`) or `gamescope` window
+  is focused. This covers borderless games, where the default `steam` rule
+  misses, and prevents a Steam Link stream from locking mid-game.
 - Guards Hyprland 0.56.2's scrolling-layout float crash (upstream
   `hyprwm/Hyprland#16121`): layout cycles route through dwindle, and `SUPER + T`
   / `SUPER + O` refuse to float on a scrolling workspace with a notification.

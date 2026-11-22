@@ -35,6 +35,14 @@ require("default.hypr.toggles")
 -- when Stremio sits paused or backgrounded.
 o.window("com.stremio.Stremio", { idle_inhibit = "fullscreen" })
 
+-- Steam's default rule inhibits idle for the client class "steam" only.
+-- Proton games are steam_app_<appid>, and gamescope runs them under its own
+-- class, so controller-only play otherwise locks the session and Steam Link
+-- loses capture. Focus-scoped inhibition also covers borderless games and
+-- releases as soon as the game loses focus.
+o.window("^steam_app_.*", { idle_inhibit = "focus" })
+o.window("^gamescope$", { idle_inhibit = "focus" })
+
 -- Flatpak apps (Stremio, installed after this session started) only show up in
 -- the Omarchy launcher when its exports directory is on XDG_DATA_DIRS.
 -- /etc/profile.d/flatpak.sh does this for login shells, which the session may
